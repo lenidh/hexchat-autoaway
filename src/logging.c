@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+#include <time.h>
 #include "logging.h"
 #include "msg_buffer.h"
 #include "hexchat-plugin.h"
@@ -21,12 +23,43 @@ static char* get_log_path() {
     return path;
 }
 
+static struct tm getTime() {
+    time_t rawtime;
+    time(&rawtime);
+    struct tm* timeinfo = localtime(&rawtime);
+    return *timeinfo;
+}
+
 static void append_msg(const char* path, const char* msg) {
     FILE* file = fopen(path, "a");
     if(file != NULL) {
-        fprintf(file, "%s\n", msg);
+        struct tm time = getTime();
+        fprintf(file, "[%04d-%02d-%02d %02d:%02d:%02d] %s\n", time.tm_year+1900,
+                                                              time.tm_mon+1,
+                                                              time.tm_mday,
+                                                              time.tm_hour,
+                                                              time.tm_min,
+                                                              time.tm_sec,
+                                                              msg);
         fclose(file);
     }
+}
+
+static const char* vsprintf_auto(const char* format, va_list args) {
+    va_list a;
+    va_copy(a, args);
+    int needed = 1 + vsnprintf(NULL, 0, format, a);
+    va_end(a);
+
+    if(needed <= 0) { return NULL; } // return value was less than 0 -> error
+
+    char *buffer = malloc(needed);
+    if(vsnprintf(buffer, needed, format, args) < 0) {
+        free(buffer);
+        return NULL;
+    }
+
+    return buffer;
 }
 
 static void flush_buffer(const char* path) {
@@ -48,10 +81,21 @@ void autoaway_init_log(hexchat_plugin *plugin_handle) {
     free(path);
 }
 
-void autoaway_log(const char* msg) {
+void autoaway_log(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    const char*  msg = vsprintf_auto(format, args);
+    va_end(args);
+
+    if(msg == NULL) {
+        fputs("fatal: failed to format log message.", stderr);
+        abort();
+    }
+
     char* path = get_log_path();
     if(msg_buffer == NULL) msg_buffer = autoaway_msg_buffer_create(256);
     autoaway_msg_buffer_enqueue(msg_buffer, msg);
+    free((void*)msg);
     if(path != NULL) {
         flush_buffer(path);
         free(path);

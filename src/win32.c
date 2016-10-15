@@ -1,24 +1,27 @@
-#ifdef WIN32
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <windows.h>
 #include <wtsapi32.h>
+#include "session-tracking.h"
 #include "logging.h"
 
-#define WINCLASS "AutoAwayMessageWindowClass"
-#define WINTITLE "AutoAwayMessageWindowTitle"
+#define WINDOW_CLASS "AutoAwayMessageWindowClass"
+#define WINDOW_TITLE "AutoAwayMessageWindowTitle"
 
 // win32 module handle
-static HINSTANCE hModule;
+static void* module_handle = NULL;
 
-void autoaway_set_away();
-void autoaway_unset_away();
+// message window handle
+static void* window_handle = NULL;
 
-static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch(msg)
-    {
+// message thread handle
+static void* thread_handle = NULL;
+
+static void default_event_handler(int event) {}
+static void (*session_event_handler)(int) = &default_event_handler;
+
+static LRESULT __stdcall window_proc(HWND hwnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
+    switch(msg) {
         case WM_CLOSE:
             DestroyWindow(hwnd);
             break;
@@ -27,12 +30,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             break;
         case WM_WTSSESSION_CHANGE:
             if(wParam == WTS_SESSION_LOCK) {
-                autoaway_log("Received session lock notification");
-                autoaway_set_away();
+                (*session_event_handler)(EVENT_SESSION_LOCK);
             }
             if(wParam == WTS_SESSION_UNLOCK) {
-                autoaway_log("Received session unlock notification");
-                autoaway_unset_away();
+                (*session_event_handler)(EVENT_SESSION_UNLOCK);
             }
             break;
         default:
@@ -41,12 +42,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     return 0;
 }
 
-static bool RegisterDLLWindowClass ()
-{
+static bool register_window_class() {
+    autoaway_log("Register window class");
     WNDCLASSEX wc;
-    wc.hInstance =  hModule;
-    wc.lpszClassName = WINCLASS;
-    wc.lpfnWndProc = WndProc;
+    wc.hInstance =  module_handle;
+    wc.lpszClassName = WINDOW_CLASS;
+    wc.lpfnWndProc = window_proc;
     wc.style = 0;
     wc.cbSize = sizeof (WNDCLASSEX);
     wc.hIcon = LoadIcon (NULL, IDI_APPLICATION);
@@ -57,38 +58,75 @@ static bool RegisterDLLWindowClass ()
     wc.cbWndExtra = 0;
     wc.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
     if (!RegisterClassEx(&wc)) {
-        autoaway_log("ERROR: Failed to register window class");
+        int err = GetLastError();
+        if(err == ERROR_CLASS_ALREADY_EXISTS)
+            autoaway_log("Error: Window class has already been registered");
+        else
+            autoaway_log("Error: Unable to register the window class due to an unknown reason");
         return false;
     }
-    autoaway_log("Successfully registered window class");
     return true;
 }
 
-static unsigned long WINAPI ThreadProc(LPVOID lpParam)
-{
-    autoaway_log("Successfully spawned message loop thread");
-    MSG msg;
-    RegisterDLLWindowClass();
-    HWND hwnd = CreateWindowEx (0, WINCLASS, WINTITLE, WS_EX_PALETTEWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, HWND_MESSAGE, NULL, hModule, NULL);
-    WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
-    autoaway_log("Successfully created message-only window and registered to receive session change notifications");
-    ShowWindow (hwnd, SW_SHOWNORMAL);
-    while (GetMessage (&msg, NULL, 0, 0) > 0) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+static void unregister_window_class() {
+    autoaway_log("Unregister window class");
+    if(UnregisterClass(WINDOW_CLASS, module_handle) == false){
+        autoaway_log("Error: Unable to unregister the window class");
     }
-    autoaway_log("Message loop ended");
-    return msg.wParam;
 }
 
-bool WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, LPVOID lpvReserved) {
-    if(fdwReason==DLL_PROCESS_ATTACH) {
-        autoaway_log("Library is being loaded. Initialize instance...");
-        hModule = hInstance;
-        autoaway_log("Spawning message loop thread...");
-        CreateThread(0, 0, ThreadProc, NULL, 0, NULL);
+static unsigned long __stdcall thread_proc(void* param) {
+    autoaway_log("Start message loop thread");
+    int result = 0;
+    bool registered = register_window_class();
+    if(registered) {
+        window_handle = CreateWindowEx (0, WINDOW_CLASS, WINDOW_TITLE, WS_EX_PALETTEWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, HWND_MESSAGE, NULL, module_handle, NULL);
+        WTSRegisterSessionNotification(window_handle, NOTIFY_FOR_THIS_SESSION);
+
+        MSG msg;
+        while (GetMessage (&msg, NULL, 0, 0) > 0) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        WTSUnRegisterSessionNotification(window_handle);
+        window_handle = NULL;
+        unregister_window_class();
+
+        result = msg.wParam;
+    } else {
+        autoaway_log("Warning: Session will not be tracked");
+    }
+    autoaway_log("Exit message loop thread");
+    return result;
+}
+
+void start_tracking_session(void (*event_handler)(int)) {
+    if(thread_handle == NULL) {
+        thread_handle = CreateThread(0, 0, &thread_proc, NULL, 0, NULL);
+        if(thread_handle == NULL) {
+            autoaway_log("Error: Unable to start message loop thread");
+        } else {
+            session_event_handler = event_handler;
+        }
+    }
+}
+
+void stop_tracking_session() {
+    if(thread_handle != NULL) {
+        session_event_handler = &default_event_handler;
+        if(window_handle != NULL) SendMessage(window_handle, WM_CLOSE, 0, 0);
+        WaitForSingleObject(thread_handle, INFINITE);
+        thread_handle = NULL;
+    }
+}
+
+bool __stdcall DllMain(void* instance, unsigned long reason, void* reserved) {
+    if(reason == DLL_PROCESS_ATTACH) {
+        module_handle = instance;
+    }
+    else if(reason == DLL_PROCESS_DETACH) {
+        module_handle = NULL;
     }
     return true;
 }
-
-#endif // WIN32

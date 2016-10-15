@@ -19,5 +19,10 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 file(GLOB SOURCES "src/*.c")
 
-add_library(AutoAway SHARED ${SOURCES})
-target_link_libraries(AutoAway wtsapi32)
+if(WIN32)
+    file(GLOB PLATFORM_SOURCES "src/win32/*.c")
+    set(LIBS ${LIBS} wtsapi32)
+endif(WIN32)
+
+add_library(AutoAway SHARED ${SOURCES} ${PLATFORM_SOURCES})
+target_link_libraries(AutoAway ${LIBS})

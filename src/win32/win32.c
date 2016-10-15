@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <windows.h>
 #include <wtsapi32.h>
-#include "session-tracking.h"
-#include "logging.h"
+#include "../session-tracking.h"
+#include "../logging.h"
 
 #define WINDOW_CLASS "AutoAwayMessageWindowClass"
 #define WINDOW_TITLE "AutoAwayMessageWindowTitle"

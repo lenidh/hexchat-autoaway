@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include "autoaway_config.h"
 #include "logging.h"
 #include "hexchat-plugin.h"
 
 #define PNAME "AutoAway"
 #define PDESC "Automatically set away status depending on session state."
-#define PVERSION "0.2"
 
 // hexchat plugin handle
 static hexchat_plugin *ph;
@@ -42,7 +42,7 @@ static int on_config_command(char *word[], char *word_eol[], void *userdate) {
 void hexchat_plugin_get_info (char **name, char **desc, char **version, void **reserved) {
     *name = PNAME;
     *desc = PDESC;
-    *version = PVERSION;
+    *version = AUTOAWAY_VERSION;
 }
 
 
@@ -56,7 +56,7 @@ int hexchat_plugin_init(hexchat_plugin *plugin_handle, char **plugin_name, char 
     // tell HexChat our info
     *plugin_name = PNAME;
     *plugin_desc = PDESC;
-    *plugin_version = PVERSION;
+    *plugin_version = AUTOAWAY_VERSION;
 
     // define configuration command
     hexchat_hook_command(ph, "AUTOAWAY", HEXCHAT_PRI_NORM, on_config_command, "Usage: AUTOAWAY MSG <message>, sets the message automatically send in reply to PRIVMSG", NULL);

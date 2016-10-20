@@ -3,8 +3,9 @@ cmake_minimum_required (VERSION 3.0)
 
 # version number
 set(AUTOAWAY_VERSION_MAJOR 0)
-set(AUTOAWAY_VERSION_MINOR 3)
+set(AUTOAWAY_VERSION_MINOR 4)
 set(AUTOAWAY_VERSION_PATCH 0)
+set(AUTOAWAY_VERSION_PRERELEASE "-beta1")
 
 # configure a header file to pass some of the CMake settings
 # to the source code

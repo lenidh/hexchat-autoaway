@@ -56,7 +56,6 @@ int hexchat_plugin_init(hexchat_plugin *plugin_handle, char **plugin_name, char 
 
     // we need to save this for use with any hexchat_* functions
     ph = plugin_handle;
-    autoaway_init_log(ph);
 
     // tell HexChat our info
     *plugin_name = PNAME;
@@ -68,6 +67,7 @@ int hexchat_plugin_init(hexchat_plugin *plugin_handle, char **plugin_name, char 
 
     start_tracking_session(&on_session_event);
 
+    hexchat_print(ph, "AutoAway plugin loaded\n");
     return 1; // success
 }
 

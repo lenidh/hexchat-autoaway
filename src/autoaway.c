@@ -5,6 +5,7 @@
 #include "autoaway_config.h"
 #include "session-tracking.h"
 #include "logging.h"
+#include "prefs.h"
 #include "hexchat-plugin.h"
 
 #define PNAME "AutoAway"
@@ -16,8 +17,12 @@ static hexchat_plugin *ph;
 static void on_session_event(int event) {
     switch(event) {
         case EVENT_SESSION_LOCK:;
-            char message[256];
-            hexchat_pluginpref_get_str(ph, "msg", message);
+            char message[STR_PREF_BUFFER_SIZE];
+            autoaway_get_pref_msg(ph, message);
+            if(strlen(message) == 0) {
+                // TODO: get default away message
+                strcpy(message, "I'm busy'");
+            }
             hexchat_commandf(ph, "AWAY %s", message);
             break;
         case EVENT_SESSION_UNLOCK:
@@ -32,13 +37,17 @@ static int on_config_command(char *word[], char *word_eol[], void *userdate) {
     if(strcasecmp(option, "MSG") == 0) {
         char *message = word_eol[3];
         if(message[0] == 0) { // if empty
-            char current[256];
-            hexchat_pluginpref_get_str(ph, "msg", current);
-            hexchat_printf(ph, "AutoAway: current away message is '%s'", current);
+            char current[STR_PREF_BUFFER_SIZE];
+            autoaway_get_pref_msg(ph, current);
+            if(strlen(current) == 0) {
+                hexchat_printf(ph, "AutoAway: No custom away message set. Default away message will be used.");
+            } else {
+                hexchat_printf(ph, "AutoAway: Current away message is '%s'", current);
+            }
         } else {
-            hexchat_pluginpref_set_str(ph, "msg", message);
+            autoaway_set_pref_msg(ph, message);
             autoaway_log("Away message changed to: %s", message);
-            hexchat_printf(ph, "AutoAway: new away message is '%s'", message);
+            hexchat_printf(ph, "AutoAway: New away message is '%s'", message);
         }
     }
     return HEXCHAT_EAT_ALL;

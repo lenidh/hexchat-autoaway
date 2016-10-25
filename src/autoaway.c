@@ -12,7 +12,7 @@
 #define PDESC "Automatically set away status depending on session state."
 
 // hexchat plugin handle
-static hexchat_plugin *ph;
+static hexchat_plugin * ph;
 
 static void on_session_event(int event) {
     switch(event) {
@@ -31,18 +31,22 @@ static void on_session_event(int event) {
     }
 }
 
-static int on_config_command(char *word[], char *word_eol[], void *userdate) {
+static int on_config_command(char * word[], char * word_eol[],
+                             void * userdate) {
     autoaway_log("Command: %s", word_eol[1]);
-    char *option = word[2];
+    char * option = word[2];
     if(strcasecmp(option, "MSG") == 0) {
-        char *message = word_eol[3];
+        char * message = word_eol[3];
         if(message[0] == 0) { // if empty
             char current[STR_PREF_BUFFER_SIZE];
             autoaway_get_pref_msg(ph, current);
             if(strlen(current) == 0) {
-                hexchat_printf(ph, "AutoAway: No custom away message set. Default away message will be used.");
+                hexchat_printf(ph,
+                               "AutoAway: No custom away message set. Default "
+                               "away message will be used.");
             } else {
-                hexchat_printf(ph, "AutoAway: Current away message is '%s'", current);
+                hexchat_printf(ph, "AutoAway: Current away message is '%s'",
+                               current);
             }
         } else {
             autoaway_set_pref_msg(ph, message);
@@ -53,14 +57,16 @@ static int on_config_command(char *word[], char *word_eol[], void *userdate) {
     return HEXCHAT_EAT_ALL;
 }
 
-void hexchat_plugin_get_info (char **name, char **desc, char **version, void **reserved) {
+void hexchat_plugin_get_info(char ** name, char ** desc, char ** version,
+                             void ** reserved) {
     *name = PNAME;
     *desc = PDESC;
     *version = AUTOAWAY_VERSION;
 }
 
-
-int hexchat_plugin_init(hexchat_plugin *plugin_handle, char **plugin_name, char **plugin_desc, char **plugin_version, char *arg) {
+int hexchat_plugin_init(hexchat_plugin * plugin_handle, char ** plugin_name,
+                        char ** plugin_desc, char ** plugin_version,
+                        char * arg) {
     autoaway_log("Load plugin");
 
     // we need to save this for use with any hexchat_* functions
@@ -72,7 +78,10 @@ int hexchat_plugin_init(hexchat_plugin *plugin_handle, char **plugin_name, char 
     *plugin_version = AUTOAWAY_VERSION;
 
     // define configuration command
-    hexchat_hook_command(ph, "AUTOAWAY", HEXCHAT_PRI_NORM, on_config_command, "Usage: AUTOAWAY MSG <message>, sets the message automatically send in reply to PRIVMSG", NULL);
+    hexchat_hook_command(ph, "AUTOAWAY", HEXCHAT_PRI_NORM, on_config_command,
+                         "Usage: AUTOAWAY MSG <message>, sets the message "
+                         "automatically send in reply to PRIVMSG",
+                         NULL);
 
     start_tracking_session(&on_session_event);
 

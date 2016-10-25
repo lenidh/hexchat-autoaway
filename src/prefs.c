@@ -3,15 +3,16 @@
 #include "logging.h"
 #include "hexchat-plugin.h"
 
-static int get_str_pref(hexchat_plugin * ph, const char * key, const char * default_value, char * dest) {
+static int get_str_pref(hexchat_plugin * ph, const char * key,
+                        const char * default_value, char * dest) {
     int success = hexchat_pluginpref_get_str(ph, key, dest);
-    if(!success) {
-        strncpy(dest, default_value, STR_PREF_BUFFER_SIZE-1);
-    }
+    if(!success) { strncpy(dest, default_value, STR_PREF_BUFFER_SIZE - 1); }
     return success;
 }
 
-static int set_str_pref(hexchat_plugin * ph, const char * key, const char * value) {
+static int set_str_pref(hexchat_plugin * ph, const char * key,
+                        const char * value) {
+
     int success = hexchat_pluginpref_set_str(ph, key, value);
     if(!success) {
         autoaway_log("Error: Failed to save setting: %s = %s", key, value);

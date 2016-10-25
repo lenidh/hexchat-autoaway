@@ -17,7 +17,7 @@ configure_file (
 )
 
 # add the binary tree to the search path for include files
-# so that we will find TutorialConfig.h
+# so that we will find autoaway_config.h
 include_directories("${PROJECT_BINARY_DIR}")
 
 file(GLOB SOURCES "src/*.c")

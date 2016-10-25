@@ -7,6 +7,8 @@ set(AUTOAWAY_VERSION_MINOR 4)
 set(AUTOAWAY_VERSION_PATCH 0)
 set(AUTOAWAY_VERSION_PRERELEASE "-beta1")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+
 # configure a header file to pass some of the CMake settings
 # to the source code
 configure_file (

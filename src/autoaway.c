@@ -92,5 +92,6 @@ int hexchat_plugin_init(hexchat_plugin * plugin_handle, char ** plugin_name,
 int hexchat_plugin_deinit() {
     autoaway_log("Unload plugin");
     stop_tracking_session();
+    hexchat_print(ph, "AutoAway plugin unloaded\n");
     return 1; // success
 }

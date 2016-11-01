@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE node PUBLIC
+  "-//freedesktop//DTD D-Bus Object Introspection 1.0//EN"
+  "https://specifications.freedesktop.org/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.gnome.ScreenSaver">
+    <signal name="ActiveChanged">
+      <arg type="b" name="active" direction="out"/>
+    </signal>
+  </interface>
+  <interface name="org.freedesktop.ScreenSaver">
+    <signal name="ActiveChanged">
+      <arg type="b" name="active" direction="out"/>
+    </signal>
+  </interface>
+</node>

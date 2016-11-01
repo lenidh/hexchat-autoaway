@@ -24,8 +24,20 @@ file(GLOB SOURCES "src/*.c")
 
 if(WIN32)
     file(GLOB PLATFORM_SOURCES "src/win32/*.c")
-    set(LIBS ${LIBS} wtsapi32)
 endif(WIN32)
+if(UNIX)
+    file(GLOB PLATFORM_SOURCES "src/dbus/*.c")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GIO REQUIRED gio-unix-2.0)
+endif(UNIX)
 
 add_library(AutoAway SHARED ${SOURCES} ${PLATFORM_SOURCES})
-target_link_libraries(AutoAway ${LIBS})
+
+if(WIN32)
+    target_link_libraries(AutoAway wtsapi32)
+endif(WIN32)
+
+if(GIO_FOUND)
+    target_link_libraries(AutoAway ${GIO_LIBRARIES})
+    target_include_directories(AutoAway PUBLIC ${GIO_INCLUDE_DIRS})
+endif(GIO_FOUND)
